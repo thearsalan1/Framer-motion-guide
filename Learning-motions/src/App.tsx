@@ -1,6 +1,12 @@
 import CardComponent from "./components/CardComponent";
 import Hero from "./components/Hero";
-import Variant from "./components/variant";
+import ScrollProgress from "./components/ScrollProgress";
+import TansformPrac from "./components/TansformPrac";
+import Task from "./components/Task";
+import ToggleList from "./components/toggleList";
+import TypeCheck from "./components/TypeCheck";
+import UseTransform from "./components/UseTransform";
+import Variant from "./components/Variant";
 
 const App = () => {
   return (
@@ -8,6 +14,12 @@ const App = () => {
       <Hero></Hero>
       <Variant></Variant>
       <CardComponent></CardComponent>
+      <ToggleList></ToggleList>
+      <TypeCheck></TypeCheck>
+      <Task></Task>
+      {/* <ScrollProgress></ScrollProgress> */}
+      <UseTransform></UseTransform>
+      <TansformPrac></TansformPrac>
     </div>
   );
 };
