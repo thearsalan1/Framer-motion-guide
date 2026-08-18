@@ -1,4 +1,5 @@
 import CardComponent from "./components/CardComponent";
+import Drag from "./components/Drag";
 import Hero from "./components/Hero";
 import ScrollProgress from "./components/ScrollProgress";
 import TansformPrac from "./components/TansformPrac";
@@ -20,6 +21,7 @@ const App = () => {
       {/* <ScrollProgress></ScrollProgress> */}
       <UseTransform></UseTransform>
       <TansformPrac></TansformPrac>
+      <Drag></Drag>
     </div>
   );
 };

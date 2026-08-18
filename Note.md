@@ -40,6 +40,22 @@ A practical guide to learning Framer Motion in React, from basic animations to v
 32. [Core Formula](#32-core-formula)
 33. [Next Topics to Learn](#33-next-topics-to-learn)
 
+34. [Transition Types: `tween`, `spring`, `inertia`](#34-transition-types-tween-spring-inertia)
+35. [`tween` — Time-Based Animation](#35-tween--time-based-animation)
+36. [`spring` — Physics-Based Animation](#36-spring--physics-based-animation)
+37. [`inertia` — Momentum-Based Animation](#37-inertia--momentum-based-animation)
+38. [`useScroll` — Tracking Scroll Progress](#38-usescroll--tracking-scroll-progress)
+39. [Tracking a Specific Element's Scroll](#39-tracking-a-specific-elements-scroll)
+40. [`useTransform` — Mapping One Range to Another](#40-usetransform--mapping-one-range-to-another)
+41. [Multi-Point Mapping](#41-multi-point-mapping)
+42. [Drag Gestures — Basics](#42-drag-gestures--basics)
+43. [`dragConstraints` — Setting Drag Boundaries](#43-dragconstraints--setting-drag-boundaries)
+44. [`dragElastic` — Boundary Resistance](#44-dragelastic--boundary-resistance)
+45. [`whileDrag` — Visual Feedback During Drag](#45-whiledrag--visual-feedback-during-drag)
+46. [`onDragEnd` — Reacting to Where the Drag Ended](#46-ondragend--reacting-to-where-the-drag-ended)
+
+---
+
 ---
 
 # 1. Installation
@@ -3333,3 +3349,640 @@ delayChildren
 ```
 
 Once these concepts are clear, Framer Motion becomes much easier to understand and use in real React projects.
+
+TWEEN/SPRING/INERTIA
+Ye batate hain animation kis physics/algorithm se chalegi. Abhi tak humne jo bhi duration, ease use kiya, wo actually default tween type ka hi hissa tha, bina explicitly bataye.
+
+1. tween (default for most values)
+Time-based animation — tum duration aur ease control karte ho manually. Ye predictable, fixed timing deta hai.
+
+jsx
+<motion.div
+  animate={{ x: 100 }}
+  transition={{ type: "tween", duration: 0.5, ease: "easeOut" }}
+/>
+
+2. spring (physics-based, natural feel)
+
+Duration specify nahi karte — instead physical properties dete ho (stiffness, damping), aur Framer Motion khud calculate karta hai kitna time lagega, based on realistic spring physics. Isse animation natural aur bouncy feel deta hai.
+
+<motion.div
+  animate={{ x: 100 }}
+  transition={{ 
+    type: "spring", 
+    stiffness: 300,  
+    damping: 20       
+  }}
+/>
+
+Key spring properties:
+
+stiffness — spring kitna "tez" khinchega target ki taraf (default: 100)
+damping — kitna oscillation/bounce control hoga (default: 10) — kam damping = zyada bouncy, jyada damping = smooth/no bounce
+mass — object ka "weight" (default: 1) — jyada mass = slower, sluggish feel
+
+<motion.button
+  whileHover={{ scale: 1.1 }}
+  whileTap={{ scale: 0.9 }}
+  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+>
+  Click me
+</motion.button>
+
+3. inertia (momentum-based, drag ke liye)
+Ye tab use hota hai jab drag/fling jaisa motion chahiye — jaise user ne element ko drag karke chhod diya, aur wo apni momentum se aage badhta hue slow ho ke rukta hai (jaise real-world friction).
+<motion.div
+  drag
+  dragTransition={{ 
+    type: "inertia",
+    bounceStiffness: 300,
+    bounceDamping: 20
+  }}
+/>
+
+Phase 4: Scroll & Gesture Animations
+
+1. useScroll — scroll progress track karna
+Ye ek hook hai jo scroll position ko 0 se 1 ke beech ek value mein convert karta hai (jaise progress bar). Page ya kisi specific element ka scroll track kar sakte ho.
+
+import { motion, useScroll } from "framer-motion";
+
+function Page() {
+  const { scrollYProgress } = useScroll();
+
+  return (
+    <motion.div
+      style={{ scaleX: scrollYProgress }}
+      className="fixed top-0 left-0 h-2 bg-teal-500 origin-left"
+    />
+  );
+}
+
+Kaise kaam karta hai: scrollYProgress ek motion value hai (normal number nahi) jo 0 (top) se 1 (bottom) tak automatically update hoti rehti hai jaise-jaise scroll hota hai. Isse directly style prop mein pass kar sakte ho.
+
+Specific element ka scroll track karna
+
+Agar poore page ki jagah sirf ek specific section ka scroll track karna hai (jaise wo section kab viewport mein enter/exit ho raha hai):
+
+import { useRef } from "react";
+import { motion, useScroll } from "framer-motion";
+
+function Section() {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+
+  return (
+    <div ref={ref} className="h-screen">
+      {/* scrollYProgress yahan 0-1 jayega jab ye section viewport se guzrega */}
+    </div>
+  );
+}
+
+offset array batata hai kab track start ho aur kab khatam — "start end" matlab "element ka start jab viewport ke end (bottom) ko touch kare" (yaani element abhi neeche se enter ho raha hai), "end start" matlab "element ka end jab viewport ke start (top) ko touch kare" (element upar se exit ho raha hai).
+
+useTransform — ek range ko dusri range mein map karna
+scrollYProgress humesha 0-1 deta hai, lekin tumhe shayad opacity: 0-1, scale: 0.5-1, x: -100 to 100 jaisi different ranges chahiye hoti hain. useTransform isi conversion ka kaam karta hai.
+import { motion, useScroll, useTransform } from "framer-motion";
+
+function ParallaxSection() {
+  const { scrollYProgress } = useScroll();
+  
+  // scrollYProgress (0 to 1) ko opacity (0 to 1) mein map kiya
+  const opacity = useTransform(scrollYProgress, [0, 1], [0, 1]);
+  
+  // scrollYProgress (0 to 1) ko y position (-100 to 0) mein map kiya
+  const y = useTransform(scrollYProgress, [0, 1], [-100, 0]);
+
+  return (
+    <motion.div style={{ opacity, y }}>
+      Parallax Content
+    </motion.div>
+  );
+}
+
+Multi-point mapping (zyada control)
+jsx
+const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [0, 1, 0]);
+Isse element fade-in hoke fade-out hoga — start mein invisible (0), beech mein fully visible (1), end mein phir invisible (0). Jitne points chaho utne de sakte ho for fine control.
+
+3. Drag Gestures
+
+Simple drag enable karne ke liye bas drag prop:
+
+jsx
+<motion.div drag className="w-20 h-20 bg-teal-500 rounded-xl" />
+
+Ye element ko kisi bhi direction mein drag karne dega. Restrict karne ke liye:
+
+jsx
+<motion.div drag="x" />   // sirf horizontal
+<motion.div drag="y" />   // sirf vertical
+dragConstraints — drag ki boundary set karna
+jsx
+<motion.div
+  drag
+  dragConstraints={{ left: 0, right: 300, top: 0, bottom: 300 }}
+/>
+
+Element in pixel values ke bahar drag nahi ho payega.
+
+Common pattern — parent ke andar hi drag limit karna:
+
+jsx
+const constraintsRef = useRef(null);
+
+<div ref={constraintsRef} className="w-full h-full">
+  <motion.div drag dragConstraints={constraintsRef} />
+</div>
+dragElastic — boundary cross karne pe "resistance" feel
+jsx
+<motion.div
+  drag
+  dragConstraints={{ left: 0, right: 300 }}
+  dragElastic={0.2}   // 0 = rigid boundary, 1 = bahut zyada stretch
+/>
+
+# 34. Transition Types: `tween`, `spring`, `inertia`
+
+These three describe **which physics/algorithm the animation runs on**.
+
+Every `duration` and `ease` used earlier in the guide was actually part of the default `tween` type, just without explicitly stating `type`.
+
+```text
+type: "tween"    → time-based, you manually control duration/ease
+type: "spring"   → physics-based, natural and bouncy feel
+type: "inertia"  → momentum-based, used for drag/fling
+```
+
+Mental model:
+
+```text
+Do you know exactly how long it should take?
+        ↓ Yes
+      tween
+
+Want a natural, bouncy feel, exact time doesn't matter?
+        ↓ Yes
+      spring
+
+Should it keep moving with momentum after a drag is released?
+        ↓ Yes
+      inertia
+```
+
+---
+
+# 35. `tween` — Time-Based Animation
+
+`tween` is the **default** for most animatable values.
+
+It's time-based — you manually control `duration` and `ease`. This gives predictable, fixed timing.
+
+```jsx
+<motion.div
+  animate={{ x: 100 }}
+  transition={{
+    type: "tween",
+    duration: 0.5,
+    ease: "easeOut"
+  }}
+/>
+```
+
+## When to Use It
+
+- When you know exactly how many seconds the animation should take.
+- For predictable UI animations like fades, slides, scroll-reveals.
+- When consistency matters (the exact same timing every time).
+
+---
+
+# 36. `spring` — Physics-Based Animation
+
+With `spring`, you don't specify duration — instead you give physical properties (`stiffness`, `damping`), and Framer Motion calculates how long it takes based on realistic spring physics.
+
+This gives the animation a natural, bouncy feel.
+
+```jsx
+<motion.div
+  animate={{ x: 100 }}
+  transition={{
+    type: "spring",
+    stiffness: 300,
+    damping: 20
+  }}
+/>
+```
+
+## Key Spring Properties
+
+```text
+stiffness  → how strongly the spring pulls toward the target (default: 100)
+damping    → how much oscillation/bounce is controlled (default: 10)
+             lower damping = more bouncy
+             higher damping = smoother / no bounce
+mass       → the "weight" of the object (default: 1)
+             higher mass = slower, more sluggish feel
+```
+
+## Button Example
+
+```jsx
+<motion.button
+  whileHover={{ scale: 1.1 }}
+  whileTap={{ scale: 0.9 }}
+  transition={{
+    type: "spring",
+    stiffness: 400,
+    damping: 17
+  }}
+>
+  Click me
+</motion.button>
+```
+
+## `tween` vs `spring`
+
+| Requirement | Use |
+|---|---|
+| Need an exact, predictable duration | `tween` |
+| Want a natural, physical, bouncy feel | `spring` |
+| Buttons, toggles, playful UI | `spring` |
+| Scroll-reveal, fade-in sections | `tween` |
+
+---
+
+# 37. `inertia` — Momentum-Based Animation
+
+`inertia` is used when you want drag/fling-like motion — for example, when the user drags an element and releases it, and it keeps moving with its own momentum before slowing to a stop (like real-world friction).
+
+```jsx
+<motion.div
+  drag
+  dragTransition={{
+    type: "inertia",
+    bounceStiffness: 300,
+    bounceDamping: 20
+  }}
+/>
+```
+
+## Meaning
+
+```text
+bounceStiffness → how strongly it bounces back after hitting a boundary
+bounceDamping   → how quickly the bounce settles down
+```
+
+`inertia` is normally used inside `dragTransition`, not `transition` — because it's specifically for controlling drag-release momentum.
+
+---
+
+# 38. `useScroll` — Tracking Scroll Progress
+
+`useScroll` is a hook that converts scroll position into a value between **0 and 1** (like a progress bar). You can track scroll for the whole page or for a specific element.
+
+```jsx
+import { motion, useScroll } from "framer-motion";
+
+function Page() {
+  const { scrollYProgress } = useScroll();
+
+  return (
+    <motion.div
+      style={{ scaleX: scrollYProgress }}
+      className="fixed top-0 left-0 h-2 bg-teal-500 origin-left"
+    />
+  );
+}
+```
+
+## How It Works
+
+`scrollYProgress` is a **motion value** (not a normal number) that automatically updates as scrolling happens:
+
+```text
+At the top of the page     → scrollYProgress = 0
+At the bottom of the page  → scrollYProgress = 1
+```
+
+You can pass it directly into the `style` prop — no extra state or re-render needed.
+
+This example creates a **scroll progress bar** that stays fixed at the top and grows in width as you scroll.
+
+---
+
+# 39. Tracking a Specific Element's Scroll
+
+If instead of the whole page you want to track just one specific section (for example, when that section enters/exits the viewport):
+
+```jsx
+import { useRef } from "react";
+import { motion, useScroll } from "framer-motion";
+
+function Section() {
+  const ref = useRef(null);
+
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"]
+  });
+
+  return (
+    <div ref={ref} className="h-screen">
+      {/* scrollYProgress goes from 0 to 1 as this section passes through the viewport */}
+    </div>
+  );
+}
+```
+
+## What `offset` Means
+
+The `offset` array describes when tracking starts and when it ends:
+
+```text
+"start end" → the element's START touches the viewport's END (bottom)
+              (the element is just entering from below)
+
+"end start" → the element's END touches the viewport's START (top)
+              (the element is exiting from the top)
+```
+
+Visually:
+
+```text
+        viewport
+      ┌──────────┐
+      │          │  ← "end" of viewport
+      │          │
+      │          │  ← "start" of viewport
+      └──────────┘
+
+offset: ["start end", "end start"]
+         ↑              ↑
+   element enters   element exits
+```
+
+---
+
+# 40. `useTransform` — Mapping One Range to Another
+
+`scrollYProgress` always gives you **0 to 1**, but you often need different ranges like `opacity: 0-1`, `scale: 0.5-1`, `x: -100 to 100`.
+
+`useTransform` handles this conversion — it maps one range to another.
+
+```jsx
+import { motion, useScroll, useTransform } from "framer-motion";
+
+function ParallaxSection() {
+  const { scrollYProgress } = useScroll();
+
+  // maps scrollYProgress (0 to 1) to opacity (0 to 1)
+  const opacity = useTransform(scrollYProgress, [0, 1], [0, 1]);
+
+  // maps scrollYProgress (0 to 1) to a y position (-100 to 0)
+  const y = useTransform(scrollYProgress, [0, 1], [-100, 0]);
+
+  return (
+    <motion.div style={{ opacity, y }}>
+      Parallax Content
+    </motion.div>
+  );
+}
+```
+
+## Syntax Breakdown
+
+```jsx
+useTransform(
+  scrollYProgress,   // input motion value
+  [0, 1],             // input range
+  [-100, 0]            // output range
+)
+```
+
+```text
+When scrollYProgress = 0   → y = -100
+When scrollYProgress = 0.5 → y = -50
+When scrollYProgress = 1   → y = 0
+```
+
+---
+
+# 41. Multi-Point Mapping
+
+For finer control you can give multiple points, not just two.
+
+```jsx
+const opacity = useTransform(
+  scrollYProgress,
+  [0, 0.5, 1],
+  [0, 1, 0]
+);
+```
+
+This makes the element **fade in and then fade out**:
+
+```text
+scrollYProgress: 0    → opacity: 0   (invisible, start)
+scrollYProgress: 0.5  → opacity: 1   (fully visible, middle)
+scrollYProgress: 1    → opacity: 0   (invisible, end)
+```
+
+You can give as many points as you need for fine-grained control.
+
+---
+
+# 42. Drag Gestures — Basics
+
+Enabling simple drag just needs the `drag` prop:
+
+```jsx
+<motion.div
+  drag
+  className="w-20 h-20 bg-teal-500 rounded-xl"
+/>
+```
+
+Just adding `drag` lets the element be dragged in any direction (both x and y) with mouse or touch. If you drag it and let go, the element snaps back to its original position — that's the default behavior, animated with a spring.
+
+## Restricting Direction
+
+```jsx
+<motion.div drag="x" />   // horizontal only
+<motion.div drag="y" />   // vertical only
+```
+
+---
+
+# 43. `dragConstraints` — Setting Drag Boundaries
+
+Without constraints, an element can be dragged infinitely — even off-screen. To limit it:
+
+## Using Fixed Pixel Values
+
+```jsx
+<motion.div
+  drag
+  dragConstraints={{
+    left: -100,
+    right: 100,
+    top: -50,
+    bottom: 50
+  }}
+/>
+```
+
+These values describe how far the element can move away from its original position, in each direction.
+
+## Using a Parent Container (more common, practical pattern)
+
+```jsx
+import { useRef } from "react";
+import { motion } from "framer-motion";
+
+function DragBox() {
+  const containerRef = useRef(null);
+
+  return (
+    <div ref={containerRef} className="w-full h-64 border-2 border-teal-500">
+      <motion.div
+        drag
+        dragConstraints={containerRef}
+        className="w-16 h-16 bg-teal-500 rounded-xl"
+      />
+    </div>
+  );
+}
+```
+
+This keeps the element restricted inside the parent, no matter what size the parent is — a very common pattern in real UIs (e.g. a draggable modal that should stay within its screen).
+
+---
+
+# 44. `dragElastic` — Boundary Resistance
+
+`dragElastic` controls how much "resistance/stretch" is felt when trying to cross the boundary.
+
+```jsx
+<motion.div
+  drag
+  dragConstraints={containerRef}
+  dragElastic={0.2}
+/>
+```
+
+## Value Range
+
+```text
+dragElastic: 0    → boundary is rigid, won't cross at all
+dragElastic: 0.5  → some "stretch" when crossing the boundary,
+                     then snaps back like a rubber band
+dragElastic: 1    → a lot of stretch allowed (almost free movement
+                     even past the boundary)
+```
+
+---
+
+# 45. `whileDrag` — Visual Feedback During Drag
+
+`whileDrag` applies a style only while the user is actively dragging the element — as soon as they let go, it returns to its normal state.
+
+```jsx
+<motion.div
+  drag
+  dragConstraints={containerRef}
+  whileDrag={{ scale: 1.1, cursor: "grabbing" }}
+/>
+```
+
+This is the same pattern as `whileHover` and `whileTap`, just triggered by dragging instead. Useful for giving the user clear feedback that the element is "picked up" — a slight scale-up, a shadow, a cursor change, etc.
+
+---
+
+# 46. `onDragEnd` — Reacting to Where the Drag Ended
+
+`onDragEnd` is a callback that fires once the drag gesture finishes — useful when you want to take an action based on where (or how fast) the element was dragged.
+
+```jsx
+<motion.div
+  drag
+  dragConstraints={containerRef}
+  onDragEnd={(event, info) => {
+    console.log("Final position:", info.point.x, info.point.y);
+    console.log("Velocity:", info.velocity.x, info.velocity.y);
+  }}
+/>
+```
+
+## The `info` Object
+
+```text
+info.point     → final x/y position of the drag
+info.velocity  → how fast the element was moving when released
+info.offset    → how far the element moved from its start point
+```
+
+This is especially useful for drag-based decisions — for example, a **swipe-to-delete** pattern: if `info.velocity.x` exceeds a certain threshold, delete or dismiss the item instead of snapping it back.
+
+```jsx
+onDragEnd={(event, info) => {
+  if (Math.abs(info.velocity.x) > 500) {
+    // treat it as a swipe — dismiss the item
+  }
+}}
+```
+
+---
+
+## Quick Reference: Part 2 Cheat Sheet
+
+```jsx
+// Tween (default, time-based)
+transition={{ type: "tween", duration: 0.5, ease: "easeOut" }}
+
+// Spring (physics-based)
+transition={{ type: "spring", stiffness: 300, damping: 20 }}
+
+// Inertia (drag momentum)
+dragTransition={{ type: "inertia", bounceStiffness: 300, bounceDamping: 20 }}
+
+// Scroll progress
+const { scrollYProgress } = useScroll();
+
+// Scroll progress of a specific element
+const { scrollYProgress } = useScroll({
+  target: ref,
+  offset: ["start end", "end start"]
+});
+
+// Map scroll progress to another range
+const y = useTransform(scrollYProgress, [0, 1], [-100, 0]);
+
+// Drag
+<motion.div
+  drag
+  dragConstraints={containerRef}
+  dragElastic={0.2}
+  whileDrag={{ scale: 1.1 }}
+  onDragEnd={(event, info) => {
+    console.log(info.point, info.velocity);
+  }}
+/>
+```
+
+---
+
+## Where This Fits in the Learning Order
+
+```text
+Phase 1: Basics         → motion components, initial, animate, transition
+Phase 2: Interactions    → whileHover, whileTap, whileFocus
+Phase 3: Coordination    → whileInView, viewport, variants, staggerChildren
+Phase 4: Advanced        → tween/spring/inertia, useScroll, useTransform,
+                            drag, whileDrag, onDragEnd  ← (this doc)
+Phase 5: Next            → useMotionValue, layout animations, AnimatePresence
+```
