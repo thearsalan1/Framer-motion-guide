@@ -1,7 +1,10 @@
 import CardComponent from "./components/CardComponent";
 import Drag from "./components/Drag";
 import Hero from "./components/Hero";
+import LayoutComponent from "./components/LayoutComponent";
+import LayoutId from "./components/LayoutId";
 import ScrollProgress from "./components/ScrollProgress";
+import Tabs from "./components/Tabs";
 import TansformPrac from "./components/TansformPrac";
 import Task from "./components/Task";
 import ToggleList from "./components/toggleList";
@@ -22,6 +25,9 @@ const App = () => {
       <UseTransform></UseTransform>
       <TansformPrac></TansformPrac>
       <Drag></Drag>
+      <LayoutComponent></LayoutComponent>
+      <Tabs></Tabs>
+      <LayoutId></LayoutId>
     </div>
   );
 };

@@ -53,6 +53,9 @@ A practical guide to learning Framer Motion in React, from basic animations to v
 44. [`dragElastic` — Boundary Resistance](#44-dragelastic--boundary-resistance)
 45. [`whileDrag` — Visual Feedback During Drag](#45-whiledrag--visual-feedback-during-drag)
 46. [`onDragEnd` — Reacting to Where the Drag Ended](#46-ondragend--reacting-to-where-the-drag-ended)
+47. [`layout` — Automatic Layout Transitions](#47-layout--automatic-layout-transitions)
+48. [`layoutId` — Shared Element Transitions](#48-layoutid--shared-element-transitions)
+49. [`LayoutGroup` — Coordinating Multiple Layout Animations](#49-layoutgroup--coordinating-multiple-layout-animations)
 
 ---
 
@@ -3975,14 +3978,153 @@ const y = useTransform(scrollYProgress, [0, 1], [-100, 0]);
 ```
 
 ---
-
-## Where This Fits in the Learning Order
-
-```text
-Phase 1: Basics         → motion components, initial, animate, transition
-Phase 2: Interactions    → whileHover, whileTap, whileFocus
-Phase 3: Coordination    → whileInView, viewport, variants, staggerChildren
-Phase 4: Advanced        → tween/spring/inertia, useScroll, useTransform,
-                            drag, whileDrag, onDragEnd  ← (this doc)
-Phase 5: Next            → useMotionValue, layout animations, AnimatePresence
+ 
+# 47. `layout` — Automatic Layout Transitions
+ 
+When an element's size or position changes because of DOM changes (an item being added/removed from a list causing a resize, or a CSS class changing), that change is normally instant and jerky. Adding the `layout` prop tells Framer Motion to automatically animate that change smoothly — without you manually calculating `initial`/`animate` values.
+ 
+```jsx
+<motion.div layout className="w-20 h-20 bg-teal-500" />
 ```
+ 
+That's it. Whenever this element's size/position changes for any reason (parent resize, flex/grid reflow, a conditional className), Framer Motion automatically transitions smoothly from the old position to the new one.
+ 
+```jsx
+import { motion } from "framer-motion";
+import { useState } from "react";
+ 
+function ExpandableCard() {
+  const [isExpanded, setIsExpanded] = useState(false);
+ 
+  return (
+    <motion.div
+      layout
+      onClick={() => setIsExpanded(!isExpanded)}
+      className="bg-teal-500 rounded-2xl p-4 cursor-pointer"
+      style={{
+        width: isExpanded ? 400 : 200,
+        height: isExpanded ? 300 : 100
+      }}
+    >
+      <h2>Click to expand</h2>
+      {isExpanded && <p>Extra content that shows up when expanded...</p>}
+    </motion.div>
+  );
+}
+```
+ 
+---
+ 
+# 48. `layoutId` — Shared Element Transitions
+ 
+This is used when you want a "morphing" transition between two different components/elements — one element disappears and another one appears in its place, transforming smoothly from the first (not teleporting, but morphing).
+ 
+## Classic Use Case: An Active Tab Indicator
+ 
+```jsx
+function Tabs() {
+  const [activeTab, setActiveTab] = useState("home");
+  const tabs = ["home", "profile", "settings"];
+ 
+  return (
+    <div className="flex gap-4">
+      {tabs.map((tab) => (
+        <button
+          key={tab}
+          onClick={() => setActiveTab(tab)}
+          className="relative px-4 py-2"
+        >
+          {tab}
+          {activeTab === tab && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute inset-0 bg-teal-500 rounded-full -z-10"
+            />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+ 
+## What's Happening
+ 
+When you change `activeTab`, the old highlighted background (`layoutId="activeTab"`) disappears from that tab, and a new element with the same `layoutId="activeTab"` appears on the new tab. Framer Motion treats them as the same element (because the `layoutId` matches) and smoothly animates/slides the gap between them — as if the background "slid" over to the new tab.
+ 
+## Key Rule
+ 
+Two (or more) motion components with the same `layoutId` string get an automatic morph transition between them, created by Framer Motion — even if they're in completely different places in the DOM.
+ 
+---
+ 
+# 49. `LayoutGroup` — Coordinating Multiple Layout Animations
+ 
+When you have multiple separate components each running their own layout animation, and you want their layout measurements to happen together, synchronized (so they don't incorrectly trigger each other), use `LayoutGroup`:
+ 
+```jsx
+import { LayoutGroup, motion } from "framer-motion";
+ 
+function App() {
+  return (
+    <LayoutGroup>
+      <Card1 />
+      <Card2 />
+    </LayoutGroup>
+  );
+}
+```
+ 
+This is an advanced use case — most simple scenarios don't need it, only when multiple independent layout animations are interacting/conflicting with each other.
+ 
+---
+ 
+## Quick Reference: Part 2 Cheat Sheet
+ 
+```jsx
+// Tween (default, time-based)
+transition={{ type: "tween", duration: 0.5, ease: "easeOut" }}
+ 
+// Spring (physics-based)
+transition={{ type: "spring", stiffness: 300, damping: 20 }}
+ 
+// Inertia (drag momentum)
+dragTransition={{ type: "inertia", bounceStiffness: 300, bounceDamping: 20 }}
+ 
+// Scroll progress
+const { scrollYProgress } = useScroll();
+ 
+// Scroll progress of a specific element
+const { scrollYProgress } = useScroll({
+  target: ref,
+  offset: ["start end", "end start"]
+});
+ 
+// Map scroll progress to another range
+const y = useTransform(scrollYProgress, [0, 1], [-100, 0]);
+ 
+// Drag
+<motion.div
+  drag
+  dragConstraints={containerRef}
+  dragElastic={0.2}
+  whileDrag={{ scale: 1.1 }}
+  onDragEnd={(event, info) => {
+    console.log(info.point, info.velocity);
+  }}
+/>
+ 
+// Automatic layout transition
+<motion.div layout />
+ 
+// Shared element transition
+<motion.div layoutId="activeTab" />
+ 
+// Coordinating multiple layout animations
+<LayoutGroup>
+  <Card1 />
+  <Card2 />
+</LayoutGroup>
+```
+ 
+---
